@@ -1,0 +1,32 @@
+SET "errorTimestamps" to empty array
+SET "notificationSent" to false
+
+FUNCTION errorOccurred
+  SET "now" to current date timestamp
+
+  FOR every timestamp in "errorTimestamps"
+    IF "now" minus timestamp is greater than a minute
+      REMOVE timestamp from "errorTimestamps" array
+    END IF
+  END FOR
+
+  PUSH "now" to "errorTimestamps"
+
+  IF length of "errorTimestamps" is equal or greater than 10 AND "notificationSent" is false
+    CALL sendNotification
+
+    SET "notificationSent" to true
+    TIMEOUT 1 minute
+      SET "notificationSent" to false
+    END TIMEOUT
+  END IF
+END FUNCTION
+
+CALL watchFile with log file path and errorOccurred as callback
+
+
+This code will have to be continuously running in the same server as the log file is in.
+I'm not too worried about performance since the arithmetic operations with integers
+are pretty quick and the array will rarely be too big, although if a critical endpoint
+is failing and the app has a lot of users it can quickly fill up, so it may be worth
+throttling the file watch or adding some logic to avoid pushing to the array too frequently.
